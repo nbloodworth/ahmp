@@ -1,7 +1,7 @@
 # ahmp
 **A**ntigen-**H**LA **M**odeling **P**ipeline
 
-rahmp is a Rosetta-based modeling pipeline that creates templated peptide/HLA models for use as starting structures in Rosetta FlexPepDocking
+ahmp is a Rosetta-based modeling pipeline that creates templated peptide/HLA models for use as starting structures in Rosetta FlexPepDocking
 refinement decoy generation.
 
 ## Dependencies
