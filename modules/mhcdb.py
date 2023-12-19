@@ -292,10 +292,19 @@ import pandas as pd
 # Custom formatting class
 from utilities import Notify
 
-# Methods and classes called by class MHCdatabase:
-
+## BEGIN FUNCTION DEFINITIONS##
 def remove_bad_pdbs(templates_dir, struct_data):
-    # A method to quickly error check all of our templates and get rid of bad ones. Based on the presumption that most errors are due to low peptide electron density and resultant missing residues in the PDB.
+    '''
+    Description:
+    A method to quickly error check all of our templates
+    and get rid of bad ones. Based on the presumption 
+    that most errors are due to low peptide electron 
+    density and resultant missing residues in the PDB.
+
+    Arguments:
+    >templates_dir: Directory to the downloaded PDB templates
+    >struct_data: pandas dataframe of the database.info file 
+    '''
     bad_pdbs=[]
     fix_pdbs=[]
     bad_chain=[]
@@ -307,9 +316,15 @@ def remove_bad_pdbs(templates_dir, struct_data):
     for pdb in struct_data["PDB_ID"].tolist():
         pdbnum+=1
         print(f"Now error checking PDB {pdbnum:<5} of {pdbtot} in {templates_dir}...",end="\r")
-        tmp_reported_seq=struct_data.loc[struct_data["PDB_ID"]==pdb,["Epitope_Description"]].iloc[0,0]
-        epitope_chain_id=struct_data.loc[struct_data["PDB_ID"]==pdb,["Antigen_PDB_Chain(s)"]].iloc[0,0]
-        tmp_record=SeqIO.parse(os.path.join(templates_dir,pdb)+".pdb","pdb-seqres")
+        tmp_reported_seq=struct_data.loc[
+                struct_data["PDB_ID"]==pdb,["Epitope_Description"]
+                ].iloc[0,0]
+        epitope_chain_id=struct_data.loc[
+                struct_data["PDB_ID"]==pdb,["Antigen_PDB_Chain(s)"]
+                ].iloc[0,0]
+        tmp_record=SeqIO.parse(
+                os.path.join(templates_dir,pdb)+".pdb","pdb-seqres"
+                )
 
         for record in SeqIO.parse(os.path.join(templates_dir,pdb)+".pdb","pdb-atom"):
             # print(record.id)
@@ -319,21 +334,30 @@ def remove_bad_pdbs(templates_dir, struct_data):
                     reported_seq.append(tmp_reported_seq)
                     pdb_seq.append(str(record.seq))
 
-        # If the sequence is OK, now we iterate through the residues and make sure the expected number of heavy atoms are present in each residue
-        tmp_struct=PDBParser(PERMISSIVE=1, QUIET=1).get_structure(pdb,os.path.join(templates_dir,pdb+".pdb"))[0]
+        # If the sequence is OK, now we iterate through the residues and make sure
+        # the expected number of heavy atoms are present in each residue
+        tmp_struct=PDBParser(
+                PERMISSIVE=1,
+                QUIET=1
+                ).get_structure(
+                        pdb,
+                        os.path.join(templates_dir,pdb+".pdb")
+                        )[0]
         rescount=1
         for chain in tmp_struct.get_chains():
             for residue in chain.get_residues():
                 atomcount=0
                 for atom in residue.get_atoms():
                     atomcount+=1
-        # If the number of atoms is unexpectedly low for a given residue, remove it from the template (a more or less arbitrary fix which takes care of edge cases where the residue at the N-terminus of the MHC-1 receptor has no atoms). Check only the terminus atoms
+        # If the number of atoms is unexpectedly low for a given residue, 
+        # remove it from the template (a more or less arbitrary fix which 
+        # takes care of edge cases where the residue at the N-terminus of 
+        # the MHC-1 receptor has no atoms). Check only the terminus atoms
                 if atomcount<3:
                     bad_chain.append(chain)
                     bad_res.append(rescount)
                     fix_pdbs.append(pdb)
                 rescount+=1
-
     print()
     # Remove the bad terminal residues from PDBs identified earlier
     if len(fix_pdbs)>0:
@@ -355,12 +379,16 @@ def remove_bad_pdbs(templates_dir, struct_data):
         print("{:<10}{:<25}{:<25}".format("PDB","IEDB sequence","PDB sequence"))
         for row in zip(bad_pdbs,reported_seq,pdb_seq):
             print("{:<10}{:<25}{:<25}".format(*row))
-
-
+    # Return the culled database.info
     return struct_data
 
 class residueSelect(Select):
-    # Subclass for overloading default selector class in Bio.PDB.PDBIO
+    '''
+    Description:
+    Subclass for overloading default selector class in Bio.PDB.PDBIO.
+    Defines "valid" residues for selection by testing if they
+    belong to the desired chain(s).
+    '''
     def __init__(self,rem_chain,rem_res):
         self.rem_chain=rem_chain
         self.rem_res=rem_res
@@ -372,8 +400,11 @@ class residueSelect(Select):
             return True
 
 class chainSelect(Select):
-    # Quick subclass to help us select chains from the PDBs (both MHC and peptide chains)
-    # Overloads the default Select class in Bio.PDB.PDBIO
+    '''
+    Class to help us select chains from the PDBs (both MHC and peptide chains)
+    Overloads the default Select class in Bio.PDB.PDBIO. Also includes
+    a method to omit HETATMs from the template structure.
+    '''
     def __init__(self,MHC,pep):
         self.MHC_chain=MHC
         self.pep_chain=pep
@@ -386,36 +417,106 @@ class chainSelect(Select):
 
     # Omit HETATMs
     def accept_atom(self, atom):
-        # In BioPDB terms, a space at the 3,0 position of get_full_id corresponds to a HETATM
+        # In BioPDB terms, a space at the 3,0 position of get_full_id 
+        # corresponds to a HETATM
         if atom.get_full_id()[3][0]==' ':
             return True
         else:
             return False
 
 class MHCdatabase:
-    __LOCATE__=os.path.join(os.environ["HOME"],"Data/MHC_database/")
-    allele=None    # The allele that this instance of the datbase points to
-    templates=[]   # A list of alleles similar in sequence to be used as structural templates, with sequences in order from most similar at index 0 to least at index -1
-    sequence=""    # The sequence of self.allele, trimmed to alpha 1 and alpha 2 domains
-    receptor=None  # PDB filename with the receptor to use in downstream modeling applications. Can be created by calling self.build_receptor()
-    mute=False #
-    def __init__(self, location=__LOCATE__, build=False, allele=None):
-        # Class constructor. Can set database location when calling. Optionally set build to True to build database at specified location and set an allele.
-        self.locate=location # Set database location and make sure it's valid
+    '''
+    Description:
 
+    Attributes:
+    >location: Location of the MHC_database folder (set by constructor)
+    >allele: Current assigned allele
+    >templates: Assigned allele templates
+    >sequence: Assigned allele alpha1/alpha2 domain sequence
+    >model: Assigned allele PDB to use in downstream modeling
+
+    Methods:
+
+    '''
+    # Public attributes default values:
+    allele=None
+    templates=[]
+    sequence=""
+    model=None
+    toprint="all"
+    def __init__(self, location, 
+            build=False,
+            allele=None,
+            toprint="all"
+            ):
+        '''
+        Description:
+        Constructor for the MHCdatabase class.
+        '''
+        # Set our Notify object
+        notifications=Notify(toprint=toprint)
+        # Set the database location and ensure it is valid
+        locate_success=self.locate(location) 
         if not Path(location).is_dir():
-            notify().warn(f"{location} does not exist. Creating directory (and parents)...")
-            Path(location).mkdir(parents=True,exist_ok=True)
-            build=True
-
+            notifications.warning(
+                    f"{location} does not exist."
+                    )
+            if build:
+                notifications.message(
+                        f"Creating specified directory {location}"
+                        )
+                try:
+                    Path(location).mkdir(parents=True,exist_ok=True)
+                except:
+                    notifications.error(
+                            f"Unble to create {}. Can not access database contents!"
+                            )
+                    sys.exit(1)
         if build:
-            print(f"Now building MHC database at {location}")
+            notifications.message("Now building MHC database at {location}")
             self.build()
 
-        if allele: # Constructor will retrieve structural templates and attempt to build a receptor by default. To change this behavior, call MHCdatabase().set_allele(get_templates=False, build_receptor=False)
+        if allele: 
+            # If an allele is set, then assign sequence and template data, and
+            # ensure we  have a valid model.
             self.set_allele(allele)
+    
+    def locate(self, location):
+        '''
+        Definition:
+        The purpose of this method is to return a valid location for the
+        MHC database. Returns False if it fails to find or create a valid
+        directory. Returns True if the directory is succesfully created.
+
+        Arguments:
+        > location: The location specified by the user
+        '''
+        location=os.path.abspath(location)
+        if not Path(location).is_dir():
+            notifications.warning(
+                    f"No database found at {location}."
+                    )
+            notifications.message(
+                    f"Creating specified directory {location}"
+                    )
+            try:
+                Path(location).mkdir(parents=True,exist_ok=True)
+            except:
+                notifications.error(
+                        f"Unable to create directory. Cannot access database contents!"
+                        )
+                return False
+        else:
+
 
     def build(self, allele_list=None, update=False, mouse_only=False):
+        '''
+        Description:
+        A method for building the database.
+
+        Arguments:
+        >allele_list: List of HLA alleles with full sequences
+        '''
         # A call to build the database. If update=True passed, then it builds the database with newly downloaded data. Takes in a location of a list of HLA alleles with full sequences (allele_list) and an option to update the database with freshly downloaded sequence data or to use pre-existing sequence data (if database.info file already exists)
         # mouse_only: parameter that if set to true, will build database with H2-Db and H2-Kb epitopes.
 
