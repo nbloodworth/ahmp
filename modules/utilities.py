@@ -4,7 +4,6 @@ ahmp.modules.utilities
 ahmp module containing esstential application specific utilities.
 '''
 
-import sys
 class Notify:
     '''
     Description:
@@ -94,15 +93,16 @@ class Notify:
                 elif "highlight" in k and i in self.highlights.keys():
                     self._message_format_keys[k]=i
     
-    def warning(self,msg,format_only=False):
+    def warning(self,msg,format_only=False,endline="\n"):
         '''
         Description:
         Default method for pre-formatted warnings.
 
         Arguments:
-        >msg: The message to print (string)
-        >format_only: [optional] Ignore the value of self.toprint
+        >msg: [str] The message to print
+        >format_only: [bool][optional] Ignore the value of self.toprint
         and instead return the formatted message as an output
+        >endline: [str][optional] argument for print(end=endline)
         '''
         fmsg='{}{}[WARNING]: {}{}{}'.format(
                 self.colors[self._message_format_keys["warn_color"]],
@@ -114,19 +114,20 @@ class Notify:
             return fmsg
         
         if self.toprint>=self._message_level_keys["warnings"]:
-            print(fmsg)
+            print(fmsg,end=endline)
 
         return
 
-    def error(self,msg,format_only=False):
+    def error(self,msg,format_only=False,endline="\n"):
         '''
         Description:
         Default method for pre-formatted errors.
 
         Arguments:
         >msg: The message to print (string)
-        >format_only: [optional] Ignore the value of self.toprint
+        >format_only: [bool][optional] Ignore the value of self.toprint
         and instead return the formatted message as an output
+        >endline: [str][optional] argument for print(end=endline)
         '''
         fmsg='{}{}[ERROR]: {}{}{}'.format(
                 self.colors[self._message_format_keys["error_color"]],
@@ -138,19 +139,20 @@ class Notify:
             return fmsg
         
         if self.toprint>=self._message_level_keys["errors"]:
-            print(fmsg)
+            print(fmsg,end=endline)
 
         return
  
-    def notice(self,msg,format_only=False):
+    def notice(self,msg,format_only=False, endline="\n"):
         '''
         Description:
         Default method for pre-formatted notices.
 
         Arguments:
         >msg: The message to print (string)
-        >format_only: [optional] Ignore the value of self.toprint
+        >format_only: [bool][optional] Ignore the value of self.toprint
         and instead return the formatted message as an output
+        >endline: [str][optional] argument for print(end=endline)
         '''
         fmsg='{}{}{}{}{}'.format(
                 self.colors[self._message_format_keys["notice_color"]],
@@ -162,20 +164,21 @@ class Notify:
             return fmsg
         
         if self.toprint>=self._message_level_keys["notifications"]:
-            print(fmsg)
+            print(fmsg,end=endline)
 
         return
 
  
-    def message(self,msg,format_only=False):
+    def message(self,msg,format_only=False,endline="\n"):
         '''
         Description:
         Print a custom-formatted message.
 
         Arguments:
         >msg: The message to print (string)
-        >format_only: [optional] Ignore the value of self.toprint
+        >format_only: [bool][optional] Ignore the value of self.toprint
         and instead return the formatted message as an output
+        >endline: [str][optional] argument for print(end=endline)
         '''
         fmsg='{}{}{}{}{}'.format(
                 self.colors[self._message_format_keys["msg_color"]],
@@ -187,8 +190,6 @@ class Notify:
             return fmsg
         
         if self.toprint>=self._message_level_keys["all"]:
-            print(fmsg)
+            print(fmsg,end=endline)
 
         return
-
-

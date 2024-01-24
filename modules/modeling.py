@@ -6,14 +6,16 @@ ahmp module for generating FlexPepDocking input.
 # Python standard libraries
 
 # ahmp
-from utilities import Notice
+from utilities import Notify
 
 def build_fasta():
     return
 
 def thread_template(
-        input_seq, allele, rosetta_main,
-        params=False,
+        input_seq, 
+        mhc_db, 
+        rosetta_main,
+        params="",
         ):
     '''
     Description:
@@ -22,6 +24,7 @@ def thread_template(
     user-determined postion.
     
     Arguments:
+    >input_seq [obj]: BioPython sequence record 
 
     Outputs:
     
@@ -36,11 +39,11 @@ def thread_template(
         return False
 
  # Retrieve the peptide sequences in the structural database for either the allele or (if unavailable) its next nearest sequence neighbor struct_data_fn=os.path.join(db.locate,"database.info")
-     if Path(struct_data_fn).is_file(): 
-         struct_data=pd.read_csv(struct_data_fn)
-     else:
-         notify().error(f"Unable to locate {struct_data_fn}! Does it exist?")
-         return False
+    if Path(struct_data_fn).is_file(): 
+        struct_data=pd.read_csv(struct_data_fn)
+    else:
+        notify().error(f"Unable to locate {struct_data_fn}! Does it exist?")
+        return False
 
      # Retrieve the default receptor location
      receptor_default=db.receptor
