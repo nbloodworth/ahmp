@@ -77,7 +77,7 @@
        Builds the database at location specified by self.location. If
        self.location does not exist, will make the folder and parents.
   ---------------------------------------------------------------------------
-     [method] set_allele(check_allele, get_templates=True,
+     [method] (check_allele, get_templates=True,
                  build_receptor=True)
         Sets an allele for the database instance. Prints a warning and
         returns False if allele requested does not exist. Also sets allele
@@ -95,7 +95,7 @@
 
         allele="all": Returns a list of all available alleles (default
         behavior). Returns a True value if the value for
-        MHCdatabase().allele is present in allele_struct.info
+        MHCdatabase().allele is present in 
 
         allele="<some HLA here>": Returns a list of all available alleles
         and a boolean value indicating whether or not requested allele is
@@ -116,7 +116,7 @@
         allele in quesiton are found, returns False.
 
         gettemplate=<4-letter-PDB-code>: Returns a dictionary where each
-        key corresponds to allele_struct.info column values for a given PDB in
+        key corresponds to  column values for a given PDB in
         the database, and a boolean indicating whether or not the PDB was
         found. Keys include:
         'Epitope_IRI', 'Epitope_Description', 'MHC_Allele',
@@ -222,7 +222,7 @@
 
     >None
 
-    db.set_allele("A*02:01", get_templates=False, build_receptor=False)
+    db.("A*02:01", get_templates=False, build_receptor=False)
     print(db.allele)
 
     >A*02:01 #Value is a string with format <gene>*<allele group>:<protein>
@@ -246,7 +246,7 @@
 
 # ===============================================================================================
 # To do:
-# [X]    Add a step to self.build() that renumbers the receptor chain and peptide chain when building the database. There are a lot of messy PDBs that confuse Rosetta later in the pipeline. Fixed them manually for now, but this will help with most of them (they throw an "assertion "). The main problem is that the residues listed in allele_struct.info are not all present in the actual PDB.
+# [X]    Add a step to self.build() that renumbers the receptor chain and peptide chain when building the database. There are a lot of messy PDBs that confuse Rosetta later in the pipeline. Fixed them manually for now, but this will help with most of them (they throw an "assertion "). The main problem is that the residues listed in  are not all present in the actual PDB.
 #  [ ] Add additional functionality to remove_bad_pdbs that considers residues with single atoms at the N-terminus (a surprising number of failure cases are caused by this). Can try running simple Rosetta thread peptide implementation, or double checking that each residue has the expected number of atoms
 # [ ] Add functionality to include MHC-I from other species (mouse, primarily)
 # [ ] Add a cluster_templates method that assess template similarity by backbone structure rather than sequence similarity, and benchmark.
@@ -297,7 +297,7 @@ def remove_bad_pdbs(templates_dir, struct_data, notifications):
 
     Arguments:
     >templates_dir: [str] Directory to the downloaded PDB templates
-    >struct_data: [pd.DataFrame obj] data from the allele_struct.info file
+    >struct_data: [pd.DataFrame obj] data from the  file
     >notificatoins: [Notify obj] Notify object for controlling output urgency
     '''
     bad_pdbs=[]
@@ -364,16 +364,9 @@ def remove_bad_pdbs(templates_dir, struct_data, notifications):
             io.save(tmp_fn,residueSelect(chain,res))
 
     # Print information on PDBs that were culled because their epitope sequence did not match the database sequence
-    if len(bad_pdbs)==0:
-        notifications.notice("Error checking complete.")
-    else:
-        print(f"Error checking complete. The following bad PDB files were located and removed from database ({len(bad_pdbs)} total):")
-        struct_data.drop(struct_data[struct_data.PDB_ID.isin(bad_pdbs)].index,inplace=True)
-        struct_data.reset_index(drop=True)
-        print("{:<10}{:<25}{:<25}".format("PDB","IEDB sequence","PDB sequence"))
-        for row in zip(bad_pdbs,reported_seq,pdb_seq):
-            print("{:<10}{:<25}{:<25}".format(*row))
-    # Return the culled allele_struct.info
+    notifications.notice(f"Error checking complete. {len(bad_pdbs)} bad pdbs found and removed)")
+    
+    # Return the culled data 
     return struct_data
 
 ## BEGIN CLASS DEFINITIONS##
@@ -498,10 +491,6 @@ class MHCdatabase:
             # If an allele is set, then assign sequence and template data, and
             # ensure we  have a valid model.
             self.set_allele(allele)
-        elif allele:
-            self.notifications.error(
-                f"Failed to set allele to {allele}"
-            )
     
     def locate(self):
         '''
@@ -561,7 +550,7 @@ class MHCdatabase:
 
         Positional returns:
         > [0]: [bool] Indicates if build was successful.
-        >Generates 3 files: allele_struct.info, build/allele_seq.info,
+        >Generates 3 files: , build/allele_seq.info,
         and build/allele_list.info
         '''
         # Ensure the database directory exists or was created (in case self.build()
@@ -782,7 +771,7 @@ class MHCdatabase:
                             )
                         os.remove(tmp_remove) # Remove the downloaded file
                     download_count+=1
-                self.notifications.message(f"{a:^15}|{i+1:^5}|{p:^15}|                                ")
+                    self.notifications.message(f"{a:^15}|{i+1:^5}|{p:^15}|                                ")
         self.notifications.message(
             f"Database built at {self.location}. Error checking PDB files..."
             )
@@ -790,11 +779,11 @@ class MHCdatabase:
         # Next we error check the PDBs for bad files
         struct_data=remove_bad_pdbs(templates_dir,struct_data,self.notifications)
 
-        # Now save our allele_struct.info file for future reference
+        # Now save our  file for future reference
         struct_data.to_csv(os.path.join(self.location,"allele_struct.info"),index=False)
 
         self.notifications.message(
-            f"Database info saved to {os.path.join(self.location,'allele_struct.info')}"
+            f"Database info saved to {os.path.join(self.location,'')}"
             )
         self.notifications.notice(
             "Database build complete"
@@ -808,7 +797,7 @@ class MHCdatabase:
         '''
         Description:
         Utility to query information about structures in MHC/peptide database 
-        by accessing and returning requested data from allele_struct.info.
+        by accessing and returning requested data from .
         Each behavior output is formatted as a tuple, with the second value 
         a boolean indicating success or failure of the requested operation.
 
@@ -850,11 +839,11 @@ class MHCdatabase:
         # Check to make sure the user has not muted feedback:
         if self.notifications.toprint < self.notifications._message_level_keys["all"]:
             self.notifications.warning(
-                "MHC database query initiated, but notification level set to a value other than 'all'"+
+                "MHC database query initiated, but notification level set to a value other than 'all'. "+
                 "Information regarding this query will not be printed."
             )
 
-        # Quick check to make sure the allele_struct.info file exists
+        # Quick check to make sure the  file exists
         allele_struct_info_fn=os.path.join(self.location,"allele_struct.info")
         if not Path(allele_struct_info_fn).is_file():
             self.notifications.error(
@@ -904,7 +893,7 @@ class MHCdatabase:
             else:
                 self.notifications.message(
                     "{:^15}{:^20}{:^10}{:^20}".format(
-                        self.allele+" PDBs",
+                        "PDBs",
                         "Epitope",
                         "Length",
                         "Resolution (A)"
@@ -939,7 +928,7 @@ class MHCdatabase:
                 epitopes=allele_struct_info["Epitope_Description"].tolist()
                 pdb_ids=allele_struct_info["PDB_ID"].tolist()
                 self.notifications.warning(
-                    f"No allele value set for database instance"+
+                    f"No allele value set for database instance. "+
                     "Retrieving epitope sequences for all available."
                     )
             else:
@@ -960,7 +949,7 @@ class MHCdatabase:
             else:
                 self.notifications.message(
                     "{:^15}{:^20}{:^10}".format(
-                        self.allele+" PDBs",
+                        str(self.allele)+" PDBs",
                         "Epitope",
                         "Length"
                         )
@@ -1031,11 +1020,17 @@ class MHCdatabase:
                 )
             # Generate statistics for the various HLAs
             A_alleles=sum("A" in s for s in allele_list)
-            A_count=sum(allele_struct_info["MHC_Allele"].str.contains("A").tolist())
+            A_count=sum(
+                    allele_struct_info["MHC_Allele"].str.contains("A").tolist()
+                    )
             B_alleles=sum("B" in s for s in allele_list)
-            B_count=sum(allele_struct_info["MHC_Allele"].str.contains("B").tolist())
+            B_count=sum(
+                    allele_struct_info["MHC_Allele"].str.contains("B").tolist()
+                    )
             C_alleles=sum("C" in s for s in allele_list)
-            C_count=sum(allele_struct_info["MHC_Allele"].str.contains("C").tolist())
+            C_count=sum(
+                    allele_struct_info["MHC_Allele"].str.contains("C").tolist()
+                    )
             total_alleles=len(allele_list)
             total_PDBs=len(allele_struct_info)
             self.notifications.message(
@@ -1066,7 +1061,7 @@ class MHCdatabase:
             for a in allele_list:
                 num_pdbs=len(
                     allele_struct_info["PDB_ID"].loc[
-                        (allele_struct_info["MHC_Allele"]==a)
+                        allele_struct_info["MHC_Allele"]==a
                         ]
                     )
                 self.notifications.message(f"{a:^10}{num_pdbs:^15}")
@@ -1089,12 +1084,15 @@ class MHCdatabase:
         >allele: [str] The HLA allele in the format <gene>*<allele_num>:<prot>
 
         Positional returns:
-        [0] [bool] Indicates whether or not set_allele was successful.
+        [0] [bool] Indicates whether or not  was successful.
         '''
         self.allele=allele
         # Retrieved the alpha 1/alpha 2 domain sequences and find the one for this allele
         allele_sequences=self.__fetch_mhc_allele_info()[1]
-        if not allele_sequences["Allele_Names"].str.contains(self.allele,regex=False).any():
+        allele_list=allele_sequences["Allele_Names"].apply(
+                lambda x: x.split()
+                ).apply(pd.Series).stack().tolist()
+        if not allele or allele not in allele_list:
             # Exit without setting the allele if not found in the list of available HLA sequences
             self.notifications.error(
                 f"Failed to set allele to {self.allele}. "+
@@ -1311,14 +1309,14 @@ class MHCdatabase:
             return []
 
         # Retrieve the sequence of the allele we want to find templates for 
-        # (set it and trim it with self.set_allele() if not done already)
+        # (set it and trim it with self.() if not done already)
         if self.sequence=="":
             self.notifications.error(
                 f"No sequence found for {self.allele}."
                 )
             return []
 
-        # Make sure that the allele_struct.info file exists
+        # Make sure that the  file exists
         allele_struct_info_fn=os.path.join(self.location,"allele_struct.info")
         if not Path(allele_struct_info_fn).is_file():
             self.notifications.error(
@@ -1537,12 +1535,12 @@ class MHCdatabase:
                 f" Setting to default of {cutoff}..."
                 )
         # Read in our database data file
-        allele_struct_info=pd.read_csv(os.path.join(self.location,"allele_struct.info")) 
+        db_records=pd.read_csv(os.path.join(self.location,"allele_struct.info")) 
         found_templates=False
         # Ensure we don't accidentally count placeholder 3-letter codes for sequences with a NCAA
         for allele in self.templates:
-            db_records=allele_struct_info.loc[
-                allele_struct_info["MHC_Allele"]==allele
+            db_records=db_records.loc[
+                db_records["MHC_Allele"]==allele
                 ].copy()
             db_records["Seq_Length"]=db_records["Epitope_Description"].apply(lambda x:len(x))
             #Define our PDBs to omit if the user requests omitting identical peptides
@@ -1675,7 +1673,7 @@ class MHCdatabase:
                 f"\nTarget sequence:{query_sequence:>15}"
                 )
             self.notifications.message(
-                f"Database match:{best_sequence:>15}"
+                f"Database match: {best_sequence:>15}"
                 )
             self.notifications.message(
                 f"\nAlignment:\n{best_alignment}"
